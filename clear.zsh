@@ -1,4 +1,5 @@
 #!/bin/zsh
 
-# setopt noglob
-rm -rf data/*
+if [ ! -z "$( ls -A './data' )" ]; then
+    rm -rf ./data/*
+fi

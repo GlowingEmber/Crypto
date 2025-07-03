@@ -68,6 +68,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-c", "--count", type=int, default=1, nargs="?")
     args = parser.parse_args()
+    print(args.count)
 
-    for cnt in range(args.count):
-        encrypt()
+    encrypt()
