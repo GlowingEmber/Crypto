@@ -36,7 +36,7 @@ def encrypt():
         [simplify_ANF_term(term) for term in clause] for clause in expanded_clauses
     ]
 
-    cipher = [[args.plaintext], [1]]
+    cipher = []
 
     for i in range(ALPHA):
         for a in range(BETA):
@@ -51,8 +51,17 @@ def encrypt():
             summand = list(product(c_J, R_selection))
             summand = [list(chain(*term)) for term in summand]
             
+            summand = [simplify_ANF_term(term) for term in summand]
+            summand = list(filter(lambda t: t != [0], summand))
+            # summand.sort(key=lambda term: (len(term), term))
+            # summand = [[simplify_ANF_term(term) for term in clause] for clause in summand]
             cipher.append(summand)
 
+    cipher = list(chain(*cipher))
+    cipher.append([args.plaintext])
+    cipher.append([1])
+    cipher.sort(key=lambda term: len(term), reverse=True)
+    # cipher.sort(key=lambda term: (len(term), term), reverse=True)
     print(cipher)
 
 ###
@@ -63,11 +72,8 @@ if __name__ == "__main__":
         description="Generates ciphertext file from plaintext based on Sebastian E. Schmittner's SAT-Based Public Key Encryption Scheme",
         epilog="https://eprint.iacr.org/2015/771.pdf",
     )
-    parser.add_argument(
-        "-y", "--plaintext", choices=[1, 0], type=int, default=1, nargs="?"
-    )
+    parser.add_argument("-y", "--plaintext", choices=[1, 0], type=int, default=1, nargs="?")
     parser.add_argument("-c", "--count", type=int, default=1, nargs="?")
     args = parser.parse_args()
-    print(args.count)
 
     encrypt()
