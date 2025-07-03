@@ -2,7 +2,6 @@
 
 ### PARAMETERS
 
-DATA_DIRECTORY_PATH="./data"
 GENERATE_RESETS_DATA=true # options: true, false
 PLAINTEXT="R" # options: 0, 1, "R" (random)
 
