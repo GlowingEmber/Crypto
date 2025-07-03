@@ -1,10 +1,10 @@
-N = 5  # NUMBER OF VARIABLES
-M = 15  # NUMBER OF CLAUSES
+N = 8  # NUMBER OF VARIABLES
+M = 10  # NUMBER OF CLAUSES
 K = 3  # NUMBER OF VARIABLES PER CLAUSE
 
 # 2 <= BETA << (much less than) ALPHA
-ALPHA = 15
-BETA = 10
+ALPHA = 10
+BETA = 5
 
 # (a)
 # To counter attacks discussed in Section 3.1.2, it is prefer-
