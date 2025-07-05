@@ -1,5 +1,5 @@
-N = 8  # NUMBER OF VARIABLES
-M = 10  # NUMBER OF CLAUSES
+N = 100  # NUMBER OF VARIABLES
+M = 426  # NUMBER OF CLAUSES
 K = 3  # NUMBER OF VARIABLES PER CLAUSE
 
 # 2 <= BETA << (much less than) ALPHA
@@ -23,3 +23,9 @@ CONDITION_B = False
 # Each clause of pub is to appear in some tuple as dis
 # cussed in Section 3.3.
 CONDITION_C = False
+
+
+GENERATED_CIPHER_SORTING = [
+        len, # shortness of monomial
+        lambda term: [int(literal[1:]) for literal in term] # literals of monomial, ascending
+]

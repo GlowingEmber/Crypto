@@ -6,12 +6,10 @@ from itertools import product, chain
 
 secure = secrets.SystemRandom()
 
-
-def random_function(row_terms):  # Generates in ANF
+def random_function(row_terms):
     terms = list(filter(lambda _: secure.choice([True, False]), row_terms))
     terms = [[e] for e in terms]
     return terms
-
 
 def simplify_ANF_term(term):
     if 0 in term:
@@ -20,16 +18,11 @@ def simplify_ANF_term(term):
     term = list(set(term))
     return term
 
-
 def encrypt():
     J_MAP = [
         secure.sample(range(1, M), BETA) for _ in range(ALPHA)
     ]
     CLAUSES = key_generation.generate_clause_list()
-
-    # NEGATES SIGNS
-    # clauses_unzipped = [list(zip(*clause)) for clause in CLAUSES.data]
-    # CLAUSES.data = [list(zip(c[0], [s^1 for s in c[1]] )) for c in clauses_unzipped] # negated (xor 1)
 
     expanded_clauses = [list(product(*c)) for c in CLAUSES.data]
     expanded_clauses = [
@@ -40,6 +33,7 @@ def encrypt():
 
     for i in range(ALPHA):
         for a in range(BETA):
+
             row = J_MAP[a]
             row_clauses = [CLAUSES.data[r] for r in row]
             row_literals = [list(zip(*clause))[0] for clause in row_clauses]
@@ -53,15 +47,16 @@ def encrypt():
             
             summand = [simplify_ANF_term(term) for term in summand]
             summand = list(filter(lambda t: t != [0], summand))
-            # summand.sort(key=lambda term: (len(term), term))
-            # summand = [[simplify_ANF_term(term) for term in clause] for clause in summand]
+
             cipher.append(summand)
 
     cipher = list(chain(*cipher))
-    cipher.append([args.plaintext])
-    cipher.append([1])
-    cipher.sort(key=lambda term: len(term), reverse=True)
-    # cipher.sort(key=lambda term: (len(term), term), reverse=True)
+
+    cipher = [sorted(term, key=lambda term: int(term[1:])) for term in cipher]
+    cipher.sort(key=lambda term: tuple([p(term) for p in GENERATED_CIPHER_SORTING]))
+
+    cipher = [[args.plaintext], [1]] + cipher
+
     print(cipher)
 
 ###
