@@ -8,7 +8,7 @@ secure = secrets.SystemRandom()
 
 def random_subset(row_terms):
     terms = list(filter(lambda _: secure.choice([True, False]), row_terms))
-    terms = [[l] for l in terms]
+    terms = [l for l in terms]
     return terms
 
 def simplify_ANF_term(term):
@@ -48,7 +48,10 @@ def encrypt():
         for i in range(ALPHA):
     
             clause = expanded_clauses[J_MAP[i][a]]
-            random = random_subset(row_literals)
+            random = [random_subset(row_literals)]
+            print("C", clause)
+            print("R", random)
+
             summand = simplify(cartesian(clause, random))
 
             cipher.append(summand)
