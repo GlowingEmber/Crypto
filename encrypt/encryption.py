@@ -49,8 +49,6 @@ def encrypt():
     
             clause = expanded_clauses[J_MAP[i][a]]
             random = [random_subset(row_literals)]
-            print("C", clause)
-            print("R", random)
 
             summand = simplify(cartesian(clause, random))
 
