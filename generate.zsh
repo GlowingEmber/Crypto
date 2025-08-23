@@ -37,5 +37,6 @@ for _ in {1..$CIPHERS_COUNT}; do
 
     mkdir "$DATA_DIRECTORY_PATH/$FILENAME"
     echo "$INPUT" > "$DATA_DIRECTORY_PATH/$FILENAME/plain_$ENUM"
-    python3 ./encrypt/encryption.py -y "$INPUT" -c "$CIPHERS_COUNT" > "$DATA_DIRECTORY_PATH/$FILENAME/$FILENAME"
+    python3 ./src/encrypt/encrypt.py -y "$INPUT" -c "$CIPHERS_COUNT" > "$DATA_DIRECTORY_PATH/$FILENAME/$FILENAME"
+    
 done

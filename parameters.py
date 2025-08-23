@@ -1,3 +1,9 @@
+import math
+
+###
+### Encryption
+###
+
 N = 100  # NUMBER OF VARIABLES
 M = 426  # NUMBER OF CLAUSES
 K = 3  # NUMBER OF VARIABLES PER CLAUSE
@@ -25,8 +31,14 @@ CONDITION_B = False
 CONDITION_C = False
 
 
-GENERATED_CIPHER_SORTING = [
+CIPHER_SORTING_ORDER = [
         len, # shortness of monomial
         lambda term: [int(literal[1:]) for literal in term] # literals of monomial, ascending
 ]
 REVERSE_CIPHER_SORTING = False
+
+###
+### Codebreaking
+###
+
+TERM_LENGTH_CUTOFF = math.floor(1.9 * BETA)
