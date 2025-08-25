@@ -14,35 +14,23 @@ from parameters import *
 
 secure = secrets.SystemRandom()
 
-
 def random_subset(available_row_literals_set):
+
     literals = filter(
         lambda _: secure.choice([True, False]), available_row_literals_set
     )
     literals = set([(l, secure.choice([0, 1])) for l in literals])
     return literals
 
-
-def simplify_ANF_term(term):
-    term = set(term)
-    term.discard(1)
-    if 0 in term:
-        return [0]
-    return term
-
-
 def simplify(expression):
-    pass
-    # expression = [list(flatten(*term)) for term in expression]
-    # expression = [simplify_ANF_term(term) for term in expression]
-    # expression = list(filter(lambda t: t != [0], expression))
 
-    # print(expression)
-    # falses = set(map(lambda t: t[0], filter(lambda t: t[1] == 0, expression)))
-    # trues = set(map(lambda t: t[0], filter(lambda t: t[1] == 1, expression)))
+    expression = set(expression) # simplifying redundancy -- a*a=a; a'*a'=a'
+    
+    literals = list(zip(*expression))[0]
+    zeroed = not len(literals) == len(set(literals)) # simplifying to 0 -- a*a'=0
 
-    # trues = trues - falses
-    # return [(term,1) for term in trues] + [(term,0) for term in falses]
+    expression = [0] if zeroed else expression
+    return expression
 
 
 def encrypt():
@@ -60,9 +48,7 @@ def encrypt():
 
     cipher = []
 
-    # f = open("data/cipher_0/map_0", "x")  # temporary solution
-
-    print(J_MAP)
+    f = open("data/cipher_0/map_0", "x")  # temporary solution
 
     for a in range(BETA):
 
@@ -70,57 +56,35 @@ def encrypt():
         beta_literals_list = [l[0] for l in flatten(*beta_clauses_list)]
         beta_counts_set = set(Counter(beta_literals_list).items())
 
+        f.write(str(f"{beta_counts_set}\n")) # temporary solution
+
         for i in range(ALPHA):
 
-            clause = CLAUSES.data[J_MAP[a][i]]  # {(x_1, p_1),(x_2, p_2),(x_3, p_3)}
-            clause_literals_set = set([l[0] for l in clause])  # {x_1, x_2, x_3}
+            ### clause -- C_J(i,a)
+            clause = CLAUSES.data[J_MAP[a][i]]  # includes parity -- {(x_1, p_1),(x_2, p_2),(x_3, p_3)}
+            clause_literals_set = set([l[0] for l in clause])  # excludes parity -- {x_1, x_2, x_3}
+
+            ### random -- R_(i,a)
             beta_literals_subset = filter(
                 lambda t: t[0] not in clause_literals_set or t[1] >= 2, beta_counts_set
             )
             beta_literals_subset = set(
                 [l[0] for l in beta_literals_subset]
-            )  # all literals in {c_J_(i,b) | b != a}
-
-
-            ### 
+            )  # all literals in {c_J(i,b) | b != a}
             random = list(
                 filter(lambda _: secure.choice([True, False]), beta_literals_subset)
             )
             random = [(t, secure.choice([0, 1])) for t in random]
 
+            ### summand
             summand = clause + random
+            summand = simplify(summand)
+
             cipher.append(summand)
 
-        # beta_literals_set = set(beta_literals_list)
-        # beta_literals_count = set(Counter(beta_literals_list).items()) # BETA_a row literals with number of repeats
-        # # print(beta_literals_set)
 
-        # f.write(str(f"{beta_literals_set}\n"))
-
-        # for i in range(ALPHA):
-        #     pass
-
-        # print([x[0] for x in CLAUSES.data[J_MAP[a][i]]])
-        # print([x[0] for x in beta_literals_count])
-
-        # available_beta_literals = list(filter(lambda t: t[0] not in clause_literals_set or t[1] > 1, clause_literals_set))
-        # # random_literals_set = random_subset(available_beta_literals)
-        # print(clause_literals_set)
-        # print(beta_literals_set)
-        # print(available_beta_literals)
-
-        # clause_literals_set = set([l[0] for l in CLAUSES.data[J_MAP[i][a]]])
-        # available_beta_literals = list(filter(lambda t: t[0] in clause_literals_set and t[1] < 2, beta_literals_count))
-        # print("clause_literals_set", clause_literals_set)
-        # print("beta_literals_count", beta_literals_count)
-        # print("available_beta_literals", available_beta_literals)
-
-        # for i in range(ALPHA):
-
-        #     clause = CLAUSES.data[J_MAP[i][a]]
-        #     clause_literals = set([l[0] for l in flatten(*clause)])
-
-    # f.close()
+    f.close()
+    # print()
     # cipher = list(flatten(*cipher))
 
     # SORT
