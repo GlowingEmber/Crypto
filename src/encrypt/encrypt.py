@@ -1,6 +1,7 @@
 import key
 import argparse
 import secrets
+import numpy as np
 from itertools import chain as flatten, product as cartesian
 from collections import Counter
 
@@ -14,6 +15,7 @@ from parameters import *
 
 secure = secrets.SystemRandom()
 
+
 def random_subset(available_row_literals_set):
 
     literals = filter(
@@ -22,20 +24,36 @@ def random_subset(available_row_literals_set):
     literals = set([(l, secure.choice([0, 1])) for l in literals])
     return literals
 
-def simplify(expression):
+def simplify_anf(term):
 
-    expression = set(expression) # simplifying redundancy -- a*a=a; a'*a'=a'
-    
-    literals = list(zip(*expression))[0]
-    zeroed = not len(literals) == len(set(literals)) # simplifying to 0 -- a*a'=0
+    term.discard(1) # a*1=a
+    if 0 in term:
+        return [0] # a*0=0
+    return term 
 
-    expression = [0] if zeroed else expression
-    return expression
+def decompose(expression):
+    # expression = [("a", 1), ("c", 0), ("e", 1)] # (a^1) * (c^0) * (e^1) ### TEST
+    # expression = [("a",0),("c","d"),("e","f")] ### TEST
+
+    expression = set(expression) # remove redundancy: a*a=a
+
+    def trim(t):
+        if t[1] == 0: return (t[0],) #a^0 = a
+        return (t[0],t[1])
+        
+    expression = map(trim, expression)
+    # with multiprocessing.Pool(processes=16) as pool:
+    #     result = pool.imap_unordered(cartesian, expression)
+    return np.fromiter(cartesian(*expression), dtype=tuple)
+    # return list(cartesian(*expression))
+    # return list(result)
 
 
 def encrypt():
     J_MAP = [secure.sample(range(1, M), ALPHA) for _ in range(BETA)]
     CLAUSES = key.generate_clause_list()
+
+    # decompose([])
 
     # DISTRIBUTE
     # expanded_clauses = [list(cartesian(*c)) for c in CLAUSES.data]
@@ -45,6 +63,7 @@ def encrypt():
     #     [simplify_ANF_term(term) for term in clause] for clause in expanded_clauses
     # ]
     # print(expanded_clauses)
+    
 
     cipher = []
 
@@ -52,19 +71,23 @@ def encrypt():
 
     for a in range(BETA):
 
-        beta_clauses_list = [CLAUSES.data[r] for r in J_MAP[a]]
+        beta_clauses_list = [CLAUSES.data[r] for r in J_MAP[a]] 
         beta_literals_list = [l[0] for l in flatten(*beta_clauses_list)]
         beta_counts_set = set(Counter(beta_literals_list).items())
 
-        f.write(str(f"{beta_counts_set}\n")) # temporary solution
+        f.write(str(f"{beta_counts_set}\n"))  # temporary solution
 
         for i in range(ALPHA):
 
-            ### clause -- C_J(i,a)
-            clause = CLAUSES.data[J_MAP[a][i]]  # includes parity -- {(x_1, p_1),(x_2, p_2),(x_3, p_3)}
-            clause_literals_set = set([l[0] for l in clause])  # excludes parity -- {x_1, x_2, x_3}
+            ### clause: C_J(i,a)
+            clause = CLAUSES.data[
+                J_MAP[a][i]
+            ]  # includes parity: {(x_1, p_1),(x_2, p_2),(x_3, p_3)}
+            clause_literals_set = set(
+                [l[0] for l in clause]
+            )  # excludes parity: {x_1, x_2, x_3}
 
-            ### random -- R_(i,a)
+            ### random: R_(i,a)
             beta_literals_subset = filter(
                 lambda t: t[0] not in clause_literals_set or t[1] >= 2, beta_counts_set
             )
@@ -77,14 +100,14 @@ def encrypt():
             random = [(t, secure.choice([0, 1])) for t in random]
 
             ### summand
-            summand = clause + random
-            summand = simplify(summand)
+            summand = clause + random # a bunch of terms ANDed
+            print("SUMMAND,", summand)
+            summand = decompose(summand)
+            print("DECOMPOSED SUMMAND,", summand)
 
             cipher.append(summand)
 
-
     f.close()
-    # print()
     # cipher = list(flatten(*cipher))
 
     # SORT

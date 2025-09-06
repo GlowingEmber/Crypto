@@ -19,11 +19,11 @@ valid_clause = (
 
 
 def _generate_valid_clause():  # all variables ORed
-    clause_literals = [f"x{l}" for l in secure.sample(range(N), K)]
+    clause_literals = [l+2 for l in secure.sample(range(N), K)]
     clause_signs = secure.sample([0, 1] * K, K)
     clause = [clause_literals, clause_signs]
 
-    if any([valid_clause(int(clause[0][k][1:]) - 1, clause[1][k]) for k in range(K)]):
+    if any([valid_clause(int(clause[0][k]) - 1 - 2, clause[1][k]) for k in range(K)]):
         return list(zip(*clause))
     return _generate_valid_clause()
 
