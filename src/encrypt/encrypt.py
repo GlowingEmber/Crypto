@@ -5,9 +5,9 @@ import key
 import argparse
 import secrets
 import numpy as np
-# np.set_printoptions(threshold=sys.maxsize)
 from itertools import chain as flatten, product as cartesian
 from collections import Counter
+import h5py
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -25,12 +25,14 @@ def random_subset(available_row_literals_set):
     literals = set([(l, secure.choice([0, 1])) for l in literals])
     return literals
 
+
 def simplify_anf(term):
 
-    term.discard(1) # a*1=a
+    term.discard(1)  # a*1=a
     if 0 in term:
-        return [0] # a*0=0
-    return term 
+        return [0]  # a*0=0
+    return term
+
 
 def cartesian_remove_1s(*iterables):
 
@@ -38,19 +40,23 @@ def cartesian_remove_1s(*iterables):
 
     result = [[]]
     for pool in pools:
-        result = [x+[y] if y > 1 else x for x in result for y in pool] # remove redundancy: a*1=a
+        result = [
+            x + [y] if y > 1 else x for x in result for y in pool
+        ]  # remove redundancy: a*1=a
 
     for prod in result:
         yield tuple(prod)
 
+
 def decompose(expression):
 
-    expression = set(expression) # remove redundancy: a*a=a
+    expression = set(expression)  # remove redundancy: a*a=a
 
     def trim(t):
-        if t[1] == 0: return (t[0],) #a^0 = a
-        return (t[0],t[1])
-    
+        if t[1] == 0:
+            return (t[0],)  # a^0 = a
+        return (t[0], t[1])
+
     expression = map(trim, expression)
     return np.fromiter(cartesian_remove_1s(*expression), dtype=tuple)
 
@@ -69,19 +75,18 @@ def encrypt():
     #     [simplify_ANF_term(term) for term in clause] for clause in expanded_clauses
     # ]
     # print(expanded_clauses)
-    
 
     cipher = []
 
-    f = open("data/cipher_0/map_0", "x")  # temporary solution
+    beta_sets_file = open(f"data/cipher_{args.count}/map_{args.count}", "w")
 
     for a in range(BETA):
 
-        beta_clauses_list = [CLAUSES.data[r] for r in J_MAP[a]] 
+        beta_clauses_list = [CLAUSES.data[r] for r in J_MAP[a]]
         beta_literals_list = [l[0] for l in flatten(*beta_clauses_list)]
         beta_counts_set = set(Counter(beta_literals_list).items())
 
-        f.write(str(f"{beta_counts_set}\n"))  # temporary solution
+        beta_sets_file.write(str(f"{beta_counts_set}\n"))
 
         for i in range(ALPHA):
 
@@ -112,21 +117,28 @@ def encrypt():
 
             cipher.append(summand)
 
-    f.close()
-    
+    beta_sets_file.close()
 
     cipher = np.fromiter([np.sort(t, axis=0) for t in flatten(*cipher)], dtype=object)
 
     # SORT
 
-    # cipher = sorted(cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER])
+    cipher = sorted(
+        cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
+    )
     # cipher = [[args.plaintext], [1]] + cipher
+    cipher_term_lengths = [len[t] for t in cipher]
 
-    # if True:
-    #     cipher.reverse()
 
-    # np.set_printoptions(threshold=sys.maxsize)
-    print(cipher)
+    # WRITE TO FILE
+    vlen_dtype = h5py.vlen_dtype(np.dtype("float64"))
+
+    filepath = f"data/cipher_{args.count}/cipher_{args.count}.hdf5"
+    with h5py.File(filepath, "w") as file:
+        dset = file.create_dataset(name="c0", shape=(len(cipher),), dtype=vlen_dtype)
+        dset[:] = cipher
+
+
 
 
 ###

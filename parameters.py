@@ -33,7 +33,7 @@ CONDITION_C = False
 
 CIPHER_SORTING_ORDER = [
         len, # shortness of monomial
-        lambda term: [int(literal[1:]) for literal in term] # literals of monomial, ascending
+        # lambda term: list(term) # literals of monomial, ascending
 ]
 REVERSE_CIPHER_SORTING = False
 
