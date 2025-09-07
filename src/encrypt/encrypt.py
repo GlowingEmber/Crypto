@@ -1,12 +1,13 @@
+import sys
+import os
+
 import key
 import argparse
 import secrets
 import numpy as np
+# np.set_printoptions(threshold=sys.maxsize)
 from itertools import chain as flatten, product as cartesian
 from collections import Counter
-
-import sys
-import os
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,14 +32,13 @@ def simplify_anf(term):
         return [0] # a*0=0
     return term 
 
-def cartesian_remove1(*iterables, repeat=1):
-    if repeat < 0:
-        raise ValueError('repeat argument cannot be negative')
-    pools = [tuple(pool) for pool in iterables] * repeat
+def cartesian_remove_1s(*iterables):
+
+    pools = [tuple(pool) for pool in iterables]
 
     result = [[]]
     for pool in pools:
-        result = [x+[y] if y > 1 else x for x in result for y in pool]
+        result = [x+[y] if y > 1 else x for x in result for y in pool] # remove redundancy: a*1=a
 
     for prod in result:
         yield tuple(prod)
@@ -52,8 +52,7 @@ def decompose(expression):
         return (t[0],t[1])
     
     expression = map(trim, expression)
-    return np.fromiter(cartesian_remove1(*expression), dtype=tuple)
-    # return np.fromiter(cartesian(*expression), dtype=tuple)
+    return np.fromiter(cartesian_remove_1s(*expression), dtype=tuple)
 
 
 def encrypt():
@@ -107,25 +106,26 @@ def encrypt():
             random = [(t, secure.choice([0, 1])) for t in random]
 
             ### summand
-            summand = clause + random # a bunch of terms ANDed
-            print("SUMMAND,", summand)
+            summand = clause + random
             summand = decompose(summand)
-            print("DECOMPOSED SUMMAND,", summand)
+            # print("DECOMPOSED SUMMAND,", summand)
 
             cipher.append(summand)
 
     f.close()
-    # cipher = list(flatten(*cipher))
+    
+
+    cipher = np.fromiter([np.sort(t, axis=0) for t in flatten(*cipher)], dtype=object)
 
     # SORT
 
-    # cipher = [sorted(term, key=lambda term: int(term[1:])) for term in cipher]
     # cipher = sorted(cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER])
     # cipher = [[args.plaintext], [1]] + cipher
 
     # if True:
     #     cipher.reverse()
 
+    # np.set_printoptions(threshold=sys.maxsize)
     print(cipher)
 
 
