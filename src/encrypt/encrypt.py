@@ -31,22 +31,29 @@ def simplify_anf(term):
         return [0] # a*0=0
     return term 
 
+def cartesian_remove1(*iterables, repeat=1):
+    if repeat < 0:
+        raise ValueError('repeat argument cannot be negative')
+    pools = [tuple(pool) for pool in iterables] * repeat
+
+    result = [[]]
+    for pool in pools:
+        result = [x+[y] if y > 1 else x for x in result for y in pool]
+
+    for prod in result:
+        yield tuple(prod)
+
 def decompose(expression):
-    # expression = [("a", 1), ("c", 0), ("e", 1)] # (a^1) * (c^0) * (e^1) ### TEST
-    # expression = [("a",0),("c","d"),("e","f")] ### TEST
 
     expression = set(expression) # remove redundancy: a*a=a
 
     def trim(t):
         if t[1] == 0: return (t[0],) #a^0 = a
         return (t[0],t[1])
-        
+    
     expression = map(trim, expression)
-    # with multiprocessing.Pool(processes=16) as pool:
-    #     result = pool.imap_unordered(cartesian, expression)
-    return np.fromiter(cartesian(*expression), dtype=tuple)
-    # return list(cartesian(*expression))
-    # return list(result)
+    return np.fromiter(cartesian_remove1(*expression), dtype=tuple)
+    # return np.fromiter(cartesian(*expression), dtype=tuple)
 
 
 def encrypt():
