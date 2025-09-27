@@ -4,13 +4,13 @@ import math
 ### Encryption
 ###
 
-N = 100  # NUMBER OF VARIABLES
-M = 426  # NUMBER OF CLAUSES
+N = 7  # NUMBER OF VARIABLES
+M = 4  # NUMBER OF CLAUSES
 K = 3  # NUMBER OF VARIABLES PER CLAUSE
 
 # 2 <= BETA << (much less than) ALPHA
-ALPHA = 15
-BETA = 10
+ALPHA = 3
+BETA = 1
 
 # (a)
 # To counter attacks discussed in Section 3.1.2, it is prefer-

@@ -3,7 +3,14 @@
 ### PARAMETERS
 
 GENERATE_RESETS_DATA=true # OPTIONS: true, false
-PLAINTEXT="random" # OPTIONS: 0, 1, "random"
+PLAINTEXT=0 # OPTIONS: 0, 1, "random"
+
+### OPTIONAL CIPHER DIRECTORY FILES
+
+# cipher_x_display__txt=true
+comments_x__txt=true
+# map_x__txt=true
+plain_x__txt=true
 
 ###
 
@@ -32,20 +39,30 @@ for _ in {1..$cipher_count}; do
     ### Finding smallest n so that data/cipher_n is NOT used
     n=0
     file="cipher_$n"
-    cipher_n_directory="$DATA_DIRECTORY/$file"
+    cipher_n_directory="$DATA_DIRECTORY/${file}_dir"
 
     while [ -e "$cipher_n_directory" ]; do
         n=$(( n + 1 ))
         file="cipher_$n"
-        cipher_n_directory="$DATA_DIRECTORY/$file"
+        cipher_n_directory="$DATA_DIRECTORY/${file}_dir"
     done
     mkdir $cipher_n_directory
 
     ### Running scripts
 
-    echo "$plaintext_n" > "$cipher_n_directory/plain_$n"
-    creation_time=("$( { time python3 ./src/encrypt/encrypt.py -y "$plaintext_n" -c "$n" >"$cipher_n_directory/comments_0"; } 2>&1 )")
-    echo "cipher_$n created in $creation_time"
+    if [[ $plain_x__txt ]];
+        then echo "$plaintext_n" > "$cipher_n_directory/plain_$n.txt"
+    fi
+    
+    if [[ $comments_x__txt ]]; then
+        comments_x__txt_path="$cipher_n_directory/comments_$n.txt"
+    else
+        comments_x__txt_path="/dev/null"
+    fi
+
+    creation_time=("$( { time python3 ./src/encrypt/encrypt.py -y "$plaintext_n" -c "$n" >$comments_x__txt_path ; } 2>&1 )")
+    echo "cipher $n created in $creation_time"
+
 
     ### Keeping track of run time
     ns_used+=($n)

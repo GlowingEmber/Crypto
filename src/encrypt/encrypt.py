@@ -3,8 +3,9 @@ import os
 import key
 import argparse
 import secrets
-from itertools import chain as flatten, product as cartesian
+from itertools import chain as flatten, combinations as subset, product as cartesian
 from collections import Counter
+
 
 import numpy as np
 import h5py
@@ -17,16 +18,12 @@ sys.path.append(
 secure = secrets.SystemRandom()
 
 
-def random_subset(available_row_literals_set):
-
-    literals = filter(
-        lambda _: secure.choice([True, False]), available_row_literals_set
-    )
-    literals = set([(l, secure.choice([0, 1])) for l in literals])
-    return literals
+def distribute(iterable):
+    s = list(iterable)
+    return flatten.from_iterable(subset(s, r) for r in range(1, len(s) + 1))
 
 
-def simplify_anf(term):
+def simplify_cnf_to_anf(term):
 
     term.discard(1)  # a*1=a
     if 0 in term:
@@ -34,51 +31,54 @@ def simplify_anf(term):
     return term
 
 
-def cartesian_remove_1s(*iterables):
+# def cartesian_remove_1s(*iterables):
 
-    pools = [tuple(pool) for pool in iterables]
+#     pools = [tuple(pool) for pool in iterables]
 
-    result = [[]]
-    for pool in pools:
-        result = [
-            x + [y] if y > 1 else x for x in result for y in pool
-        ]  # remove redundancy: a*1=a
+#     result = [[]]
+#     for pool in pools:
+#         result = [
+#             x + [y] if y > 1 else x for x in result for y in pool
+#         ]  # remove redundancy: a*1=a
 
-    for prod in result:
-        yield tuple(prod)
+#     for prod in result:
+#         yield tuple(prod)
+
+# modified itertools.product method
+# def distribute(*iterables):
+
+#     pools = [tuple(pool) for pool in iterables]
+
+#     result = [[]]
+#     for pool in pools:
+#         result = [
+#             x + [y] for x in result for y in pool
+#         ]
+
+#     for prod in result:
+#         yield tuple(prod)
 
 
-def decompose(expression):
+def cnf_to_anf(term):
 
-    expression = set(expression)  # remove redundancy: a*a=a
+    term = [(l[0], l[1] ^ 1) for l in term] # a = a xor 0; !a = a xor 1
+    term = cartesian(*term)
+    term = filter(lambda t: 0 not in t, term)
+    term = map(lambda t: tuple(filter(lambda t: t != 1, t)), term)
+    term = list(term)
 
-    def trim(t):
-        if t[1] == 0:
-            return (t[0],)  # a^0 = a
-        return (t[0], t[1])
-
-    expression = map(trim, expression)
-    return np.fromiter(cartesian_remove_1s(*expression), dtype=tuple)
+    return term
 
 
 def encrypt():
     J_MAP = [secure.sample(range(1, M), ALPHA) for _ in range(BETA)]
     CLAUSES = key.generate_clause_list()
 
-    # decompose([])
-
-    # DISTRIBUTE
-    # expanded_clauses = [list(cartesian(*c)) for c in CLAUSES.data]
-    # print(expanded_clauses)
-    # # SIMPLIFY
-    # expanded_clauses = [
-    #     [simplify_ANF_term(term) for term in clause] for clause in expanded_clauses
-    # ]
-    # print(expanded_clauses)
+    print(CLAUSES.data)
 
     cipher = []
 
-    beta_sets_file = open(f"data/cipher_{args.count}/map_{args.count}", "w")
+    beta_sets_file = open(f"data/cipher_{args.count}_dir/map_{args.count}.txt", "w")
 
     for a in range(BETA):
 
@@ -93,34 +93,43 @@ def encrypt():
             ### CREATE CLAUSE C_J(i,a)
 
             # includes parity: {(x_1, p_1),(x_2, p_2),(x_3, p_3)}
-            clause = CLAUSES.data[
-                J_MAP[a][i]
-            ]
+            clause = CLAUSES.data[J_MAP[a][i]]
 
             # excludes parity: {x_1, x_2, x_3}
-            clause_literals_set = set(
-                [l[0] for l in clause]
-            )
+            clause_literals_set = set([l[0] for l in clause])
 
             ### CREATE RANDOM R_(i,a)
-            
+
             beta_literals_subset = filter(
                 lambda t: t[0] not in clause_literals_set or t[1] >= 2, beta_counts_set
             )
 
             # all literals in {c_J(i,b) | b != a}
-            beta_literals_subset = set(
-                [l[0] for l in beta_literals_subset]
-            )
+            beta_literals_subset = set([l[0] for l in beta_literals_subset])
             random = list(
                 filter(lambda _: secure.choice([True, False]), beta_literals_subset)
             )
             random = [(t, secure.choice([0, 1])) for t in random]
 
-            ### CREATE SUMMAND: C_J + R
-            summand = clause + random
-            summand = decompose(summand)
+            ### CREATE SUMMAND
+
+            print("CLAUSE CNF --    ", clause)
+            clause = cnf_to_anf(clause)  # + [(1,)]  # XOR with one for negation
+            print("CLAUSE -- ANF", clause)
+
+            print("RANDOM CNF --    ", random)
+            random = cnf_to_anf(random)
+            print("RANDOM ANF --    ", random)
+
+            
+            summand = list(cartesian(clause, random))
+            print("SUMMAND ANF unflattened --   ", summand)
+
+            summand = [list(set(flatten(*t))) for t in summand]
+            print("SUMMAND ANF --   ", summand)
+
             cipher.append(summand)
+
 
     beta_sets_file.close()
 
@@ -134,13 +143,21 @@ def encrypt():
     # cipher = [[args.plaintext], [1]] + cipher
     cipher_term_lengths = [len(t) for t in cipher]
 
-    ### WRITE TO FILE
+    ### WRITE TO FILES
+    filepath = f"data/cipher_{args.count}_dir/priv_{args.count}.txt"
+    with open(filepath, "w") as file:
+        file.write(key.PRIVATE_KEY_STRING)
+
     vlen_dtype = h5py.vlen_dtype(np.dtype("float64"))
 
-    filepath = f"data/cipher_{args.count}/cipher_{args.count}.hdf5"
+    filepath = f"data/cipher_{args.count}_dir/cipher_{args.count}.hdf5"
     with h5py.File(filepath, "w") as file:
-        dset = file.create_dataset(name="c0", shape=(len(cipher),), dtype=vlen_dtype)
+        dset = file.create_dataset(
+            name="expression", shape=(len(cipher),), dtype=vlen_dtype
+        )
         dset[:] = cipher
+
+    print(cipher)
 
 
 ###
