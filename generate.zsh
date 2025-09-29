@@ -3,7 +3,7 @@
 ### PARAMETERS
 
 GENERATE_RESETS_DATA=true # OPTIONS: true, false
-PLAINTEXT=0 # OPTIONS: 0, 1, "random"
+PLAINTEXT="random" # OPTIONS: 0, 1, "random"
 
 ### OPTIONAL CIPHER DIRECTORY FILES
 
@@ -60,7 +60,7 @@ for _ in {1..$cipher_count}; do
         comments_x__txt_path="/dev/null"
     fi
 
-    creation_time=("$( { time python3 ./src/encrypt/encrypt.py -y "$plaintext_n" -c "$n" >$comments_x__txt_path ; } 2>&1 )")
+    creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" >$comments_x__txt_path ; } 2>&1 )")
     echo "cipher $n created in $creation_time"
 
 
