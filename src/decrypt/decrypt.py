@@ -1,17 +1,15 @@
 import h5py
 import numpy as np
 
-# from collections import defaultdict
-# import matplotlib.pyplot as plt
-
-
 def decrypt():
 
     with open("data/cipher_0_dir/priv_0.txt", "r") as file:
+
         priv = file.read()
         print("PRIV", priv)
 
         with h5py.File("data/cipher_0_dir/cipher_0.hdf5", "r") as file:
+            
             if "expression" in file:
 
                 def assign(x):
@@ -47,43 +45,4 @@ with open("data/cipher_0_dir/plain_0.txt", "r") as file:
     if g_decryption != 0:
         prefix = "un"
 
-    print(f"cipher encrypted {prefix}successfully. y = {y}, g(priv) = {y}")
-
-
-
-
-# def decrypt(priv, expression):
-#     # with open("data/cipher_0_dir/priv_0.txt", "r") as file:
-#     #     priv = file.read()
-#         # print("PRIV", priv)
-
-#     def assign(x):
-#         x = int(x)
-#         if x == 1:
-#             return x
-#         return int(priv[x-2])
-
-#     v_assign = np.vectorize(assign)
-
-#     v_assign_conditional = lambda term: v_assign(term) if term else []
-
-#     # expression = file.get("expression")
-#     # expression = np.array(expression[:])
-
-#     expression = [all(v_assign_conditional(term)) for term in expression]
-#     expression = filter(lambda term: term, expression)
-#     expression = list(expression)
-#     # print("EXPRESSION", expression)
-
-#     size = sum(1 for _ in expression)
-#     # print("SIZE", size)
-
-#     g = size % 2
-
-#     return g
-
-#         # with h5py.File("data/cipher_0_dir/cipher_0.hdf5", "r") as file:
-#         #     if "expression" in file:
-
-
-# # print(decrypt())
+    print(f"cipher encrypted {prefix}successfully. y = {y}, g(priv) = {y ^ g_decryption}")

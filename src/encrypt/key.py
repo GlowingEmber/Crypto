@@ -25,7 +25,7 @@ def _generate_valid_clause():  # all variables ORed
 
     if any([valid_clause(int(clause[0][k]) - 2, clause[1][k]) for k in range(K)]):
         c = list(zip(*clause))
-        print("CLAUSE ADDED!", c)
+        # print("CLAUSE ADDED!", c)
         return c
     return _generate_valid_clause()
 

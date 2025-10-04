@@ -17,7 +17,7 @@ plain_x__txt=true
 mkdir -p "$DATA_DIRECTORY"
 
 if $GENERATE_RESETS_DATA;
-    then ./clear.zsh
+    then ./clearall.zsh
 fi
 
 cipher_count=1
@@ -61,6 +61,7 @@ for _ in {1..$cipher_count}; do
     fi
 
     creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" >$comments_x__txt_path ; } 2>&1 )")
+    # creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" ; } )")
     echo "cipher $n created in $creation_time"
 
 

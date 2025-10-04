@@ -10,7 +10,7 @@ import numpy as np
 import h5py
 
 from parameters import *
-# from ..decrypt.decrypt import decrypt
+from memory_profiler import profile
 
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,42 +19,61 @@ secure = secrets.SystemRandom()
 
 
 def distribute(iterable):  # itertools powerset recipe
-    s = list(iterable)
-    return flatten.from_iterable(subset(s, r) for r in range(1, len(s) + 1))
+    return flatten.from_iterable(subset(iterable, r) for r in range(1, len(iterable) + 1))
 
 
-###
-# [(3, 0), (4, 1), (7, 1)]
-# [(3,1), (4,0), (7,0)]
-# [ 347 340 307 300 147 140 107 100 ]
-# [ 347 340 307 300 147 140 107 100 ]
-# [ 347 340 307 300 147 140 107 100 ]
-#
+def product(clause, random):
 
-# [(3, 0), (4, 1), (7, 1)]
-# 347 341 317 311
-# 347 34 37 3
+    clause = np.fromiter(clause, dtype=tuple)
+    random = np.fromiter(random, dtype=tuple)
 
+    x_array, y_array = np.meshgrid(clause, random)
+
+    # product = np.column_stack
+    product = np.fromiter(zip(x_array.ravel(), y_array.ravel()), dtype=tuple)
+    print(product)
+
+    # def unique(t):
+    #     return tuple(set(flatten(*t)))
+    # product = unique(product)
+    # print("MY VERSION", product)
+    
+    product = [set(flatten(*t)) for t in product]
+    print("OLD VERSION", product)
+
+    return product
+
+# def product(clause, random):
+#     pools = (tuple(clause), tuple(random))
+
+#     result = [[]]
+#     for pool in pools:
+#         result = [
+#             x + [y] for x in result for y in pool
+#         ]
+
+#     for prod in result:
+#         yield tuple(set(flatten(prod)))
 
 def cnf_to_neg_anf(term):
     # NOT a, represented as tuple(a,0), equals a^1
     # a, represented as tuple(a,1), equals a^0
-    # term = [(l[0], l[1] ^ 1) for l in term]
+    # BUT we are negating
 
     term = term + [(1,)]
     term = cartesian(*term)
     term = filter(lambda t: 0 not in t, term)  # a*0 = 0
     term = map(lambda t: tuple(filter(lambda t: t != 1, t)), term)  # a*1 = a
     term = map(lambda t: tuple(set(t)), term)  # a*a = a
-    term = list(term)
     return term
 
 
+@profile
 def encrypt():
     J_MAP = [secure.sample(range(1, M), ALPHA) for _ in range(BETA)]
     CLAUSES = key.generate_clause_list()
 
-    cipher = []
+    cipher = np.empty(0, dtype=object)
     beta_sets_file = open(f"data/cipher_{args.count}_dir/map_{args.count}.txt", "w")
 
     for a in range(BETA):
@@ -83,49 +102,46 @@ def encrypt():
                 [l[0] for l in beta_literals_subset]
             )  # all literals in {c_J(i,b) | b != a}
 
-            anf_all_terms = list(distribute(beta_literals_subset))
+            anf_all_terms = np.fromiter(distribute(beta_literals_subset), dtype=tuple)
 
-            random = list(filter(lambda _: secure.choice([True, False]), anf_all_terms))
+            random = filter(lambda _: secure.choice([True, False]), anf_all_terms)
 
-            # random = [(t, secure.choice([0, 1])) for t in random]
-
-            ### SUMMAND
-
-            # print("C in CNF", clause) # CNF
-            # print("CLAUSE", clause)
-            # print("ASSIGNMENT", [int(key.PRIVATE_KEY_STRING[l[0]-2]) == l[1] for l in clause])
-
+            # print("RANDOM", random)
+            # SELECTION = secrets.randbits(len(beta_literals_subset))
+            # SELECTION_LIST = f"{bin(SELECTION)[2:]:0>{N}}"  # B^n
+            # SELECTION_LIST = map(lambda b: (b,), SELECTION_LIST)
 
             clause = cnf_to_neg_anf(clause)
-            # print("CLAUSE AFTER CONVERTING TO ANF", clause)
-            # print("DECRYPT AFTER CONVERTING to ANF", decrypt(key.PRIVATE_KEY_STRING, clause))
-            # clause = clause + [(1,)]  # !a = a^1
-            # print("DECRYPT AFTER NEGATING", decrypt(key.PRIVATE_KEY_STRING, clause))
+
             
 
-            # print("!C in ANF", clause) # ANF
+            ### summand = product_as_set(clause, random)
+            ### ALTERNATIVE SUMMAND PRODUCT
+            # summand = cartesian(clause, random)
+            # summand = [set(flatten(*t)) for t in summand]
+            summand = product(clause, random)
 
-            # print("R in ANF", random) # ANF
 
-            summand = list(cartesian(clause, random))
-            summand = [set(flatten(*t)) for t in summand]
-            summand = list(map(lambda t: tuple(filter(lambda t: t != 1, t)), summand))
+            summand = map(lambda t: tuple(filter(lambda t: t != 1, t)), summand)
             summand = set(Counter(summand).items())
 
             summand = filter(lambda t: t[1] % 2 == 1, summand)
-            summand = list(map(lambda t: t[0], summand))
+            summand = map(lambda t: t[0], summand)
+            summand = np.fromiter(summand, dtype=map)
 
-            cipher.append(summand)
+            cipher = np.append(cipher, summand)
+
+            print(cipher)
 
     beta_sets_file.close()
-    print(cipher)
-    cipher = np.fromiter([np.sort(t, axis=0) for t in flatten(*cipher)], dtype=object)
+
+    cipher = np.fromiter([np.sort(t, axis=0) for t in cipher], dtype=object)
 
     ### SORT
 
-    cipher = sorted(
-        cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
-    )
+    # cipher = sorted(
+    #     cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
+    # )
 
     ### WRITE TO FILES
     filepath = f"data/cipher_{args.count}_dir/priv_{args.count}.txt"
@@ -143,7 +159,6 @@ def encrypt():
         dset[:] = cipher
 
     print(cipher)
-    # print(decrypt(key.PRIVATE_KEY_STRING, cipher))
 
 
 if __name__ == "__main__":
