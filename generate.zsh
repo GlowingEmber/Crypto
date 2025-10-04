@@ -7,10 +7,10 @@ PLAINTEXT="random" # OPTIONS: 0, 1, "random"
 
 ### OPTIONAL CIPHER DIRECTORY FILES
 
-# cipher_x_display__txt=true
-comments_x__txt=true
-# map_x__txt=true
-plain_x__txt=true
+cipher_n__txt=true
+comments_n__txt=true
+# map_n__txt=true
+plain_n__txt=true
 
 ###
 
@@ -50,17 +50,17 @@ for _ in {1..$cipher_count}; do
 
     ### Running scripts
 
-    if [[ $plain_x__txt ]];
+    if [[ $plain_n__txt ]];
         then echo "$plaintext_n" > "$cipher_n_directory/plain_$n.txt"
     fi
     
-    if [[ $comments_x__txt ]]; then
-        comments_x__txt_path="$cipher_n_directory/comments_$n.txt"
+    if [[ $comments_n__txt ]]; then
+        comments_n__txt_path="$cipher_n_directory/comments_$n.txt"
     else
-        comments_x__txt_path="/dev/null"
+        comments_n__txt_path="/dev/null"
     fi
 
-    creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" >$comments_x__txt_path ; } 2>&1 )")
+    creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" -d $cipher_n__txt >$comments_n__txt_path ; } 2>&1 )")
     # creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" ; } )")
     echo "cipher $n created in $creation_time"
 
@@ -68,6 +68,11 @@ for _ in {1..$cipher_count}; do
     ### Keeping track of run time
     ns_used+=($n)
     (( total_creation_time += $((${creation_time%?})) ))
+
+    if [[ $cipher_n__txt ]]; then
+        h5dump --width=1 "$cipher_n_directory/cipher_${n}.hdf5" > "$cipher_n_directory/cipher_${n}.txt"
+    fi
+
 done
 
 

@@ -6,7 +6,6 @@ def decrypt():
     with open("data/cipher_0_dir/priv_0.txt", "r") as file:
 
         priv = file.read()
-        print("PRIV", priv)
 
         with h5py.File("data/cipher_0_dir/cipher_0.hdf5", "r") as file:
             
@@ -28,10 +27,8 @@ def decrypt():
                 expression = [all(v_assign_conditional(term)) for term in expression]
                 expression = filter(lambda term: term, expression)
                 expression = list(expression)
-                # print("EXPRESSION", expression)
 
                 size = sum(1 for _ in expression)
-                # print("SIZE", size)
 
                 g = size % 2
 
@@ -40,9 +37,10 @@ def decrypt():
 
 g_decryption = decrypt()
 with open("data/cipher_0_dir/plain_0.txt", "r") as file:
+    
     y = int(file.read())
-    prefix = ""
-    if g_decryption != 0:
-        prefix = "un"
-
-    print(f"cipher encrypted {prefix}successfully. y = {y}, g(priv) = {y ^ g_decryption}")
+    res = {
+        0: "SUCCESS",
+        1: "FAILURE"
+    }
+    print(f"{res[g_decryption]}: y={y}, g(priv)={y ^ g_decryption}")

@@ -19,10 +19,12 @@ secure = secrets.SystemRandom()
 
 
 def distribute(iterable):  # itertools powerset recipe
-    return flatten.from_iterable(subset(iterable, r) for r in range(1, len(iterable) + 1))
+    return flatten.from_iterable(
+        subset(iterable, r) for r in range(1, len(iterable) + 1)
+    )
 
 
-def product(clause, random):
+def product_simplify(clause, random):
 
     clause = np.fromiter(clause, dtype=tuple)
     random = np.fromiter(random, dtype=tuple)
@@ -31,34 +33,17 @@ def product(clause, random):
 
     # product = np.column_stack
     product = np.fromiter(zip(x_array.ravel(), y_array.ravel()), dtype=tuple)
-    print(product)
 
     # def unique(t):
     #     return tuple(set(flatten(*t)))
     # product = unique(product)
-    # print("MY VERSION", product)
-    
+
     product = [set(flatten(*t)) for t in product]
-    print("OLD VERSION", product)
 
     return product
 
-# def product(clause, random):
-#     pools = (tuple(clause), tuple(random))
-
-#     result = [[]]
-#     for pool in pools:
-#         result = [
-#             x + [y] for x in result for y in pool
-#         ]
-
-#     for prod in result:
-#         yield tuple(set(flatten(prod)))
 
 def cnf_to_neg_anf(term):
-    # NOT a, represented as tuple(a,0), equals a^1
-    # a, represented as tuple(a,1), equals a^0
-    # BUT we are negating
 
     term = term + [(1,)]
     term = cartesian(*term)
@@ -94,6 +79,8 @@ def encrypt():
                 [l[0] for l in clause]
             )  # excludes parity: {x_1, x_2, x_3}
 
+            clause = cnf_to_neg_anf(clause)
+
             ### RANDOM
             beta_literals_subset = filter(
                 lambda t: t[0] not in clause_literals_set or t[1] >= 2, beta_counts_set
@@ -106,21 +93,8 @@ def encrypt():
 
             random = filter(lambda _: secure.choice([True, False]), anf_all_terms)
 
-            # print("RANDOM", random)
-            # SELECTION = secrets.randbits(len(beta_literals_subset))
-            # SELECTION_LIST = f"{bin(SELECTION)[2:]:0>{N}}"  # B^n
-            # SELECTION_LIST = map(lambda b: (b,), SELECTION_LIST)
-
-            clause = cnf_to_neg_anf(clause)
-
-            
-
-            ### summand = product_as_set(clause, random)
-            ### ALTERNATIVE SUMMAND PRODUCT
-            # summand = cartesian(clause, random)
-            # summand = [set(flatten(*t)) for t in summand]
-            summand = product(clause, random)
-
+            ### SUMMAND
+            summand = product_simplify(clause, random)
 
             summand = map(lambda t: tuple(filter(lambda t: t != 1, t)), summand)
             summand = set(Counter(summand).items())
@@ -139,9 +113,11 @@ def encrypt():
 
     ### SORT
 
-    # cipher = sorted(
-    #     cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
-    # )
+    if args.display:
+        cipher = sorted(
+            cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
+        )
+        
 
     ### WRITE TO FILES
     filepath = f"data/cipher_{args.count}_dir/priv_{args.count}.txt"
@@ -171,6 +147,7 @@ if __name__ == "__main__":
         "-y", "--plaintext", choices=[1, 0], type=int, default=1, nargs="?"
     )
     parser.add_argument("-c", "--count", type=int, default=1, nargs="?")
+    parser.add_argument("-d", "--display", type=bool, default=False, nargs="?")
     args = parser.parse_args()
 
     encrypt()
