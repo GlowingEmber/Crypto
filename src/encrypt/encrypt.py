@@ -113,6 +113,7 @@ def encrypt():
 
     ### SORT
 
+    print("ARGS DISPLAY", args.display)
     if args.display:
         cipher = sorted(
             cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
@@ -128,7 +129,6 @@ def encrypt():
 
     filepath = f"data/cipher_{args.count}_dir/cipher_{args.count}.hdf5"
     with h5py.File(filepath, "w") as file:
-        pass
         dset = file.create_dataset(
             name="expression", shape=(len(cipher),), dtype=vlen_dtype
         )
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         "-y", "--plaintext", choices=[1, 0], type=int, default=1, nargs="?"
     )
     parser.add_argument("-c", "--count", type=int, default=1, nargs="?")
-    parser.add_argument("-d", "--display", type=bool, default=False, nargs="?")
+    parser.add_argument("-d", "--display", type=int, default=0, choices=[0,1], nargs="?")
     args = parser.parse_args()
 
     encrypt()

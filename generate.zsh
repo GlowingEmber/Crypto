@@ -2,12 +2,12 @@
 
 ### PARAMETERS
 
-GENERATE_RESETS_DATA=true # OPTIONS: true, false
+GENERATE_CLEARS_DATA=true # OPTIONS: true, false
 PLAINTEXT="random" # OPTIONS: 0, 1, "random"
 
 ### OPTIONAL CIPHER DIRECTORY FILES
 
-cipher_n__txt=true
+cipher_n__txt=false
 comments_n__txt=true
 # map_n__txt=true
 plain_n__txt=true
@@ -16,7 +16,7 @@ plain_n__txt=true
 
 mkdir -p "$DATA_DIRECTORY"
 
-if $GENERATE_RESETS_DATA;
+if $GENERATE_CLEARS_DATA;
     then ./clearall.zsh
 fi
 
@@ -60,7 +60,7 @@ for _ in {1..$cipher_count}; do
         comments_n__txt_path="/dev/null"
     fi
 
-    creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" -d $cipher_n__txt >$comments_n__txt_path ; } 2>&1 )")
+    creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" -d "$(( cipher_n__txt == 1 ))" >$comments_n__txt_path ; } 2>&1 )")
     # creation_time=("$( { time python3 -m src.encrypt.encrypt -y "$plaintext_n" -c "$n" ; } )")
     echo "cipher $n created in $creation_time"
 

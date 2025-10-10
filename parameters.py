@@ -42,4 +42,4 @@ REVERSE_CIPHER_SORTING = False
 ### Codebreaking
 ###
 
-TERM_LENGTH_CUTOFF = math.floor(1.9 * BETA)
+TERM_LENGTH_CUTOFF = math.floor(1.9 * ALPHA)

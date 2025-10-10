@@ -13,44 +13,49 @@ from parameters import *
 
 # from collections import Counter
 
+import h5py
 import numpy as np
-import matplotlib.pyplot as plt
-
 
 def codebreak(filename):
-    with open(filename, "r") as file:
-        ciphertext = ast.literal_eval(file.read())
+    with h5py.File(filename, "r") as file:
+        if "expression" in file:
 
-        large_terms = list(
-            filter(lambda term: len(term) >= TERM_LENGTH_CUTOFF, ciphertext)
-        )
-        subgroup = set(large_terms[-1])
-        print(subgroup)
-        group = set(subgroup)
+            ciphertext = file["expression"]
+            ciphertext = np.array(ciphertext[:])
 
-        closest = [(term, len(subgroup.difference(term))) for term in ciphertext]
-        # group = list(filter(lambda term: len(subgroup.difference(term)) < 0.1, ciphertext))
+            ciphertext = map(tuple, ciphertext)
 
-        # print(group)
+            lengths = map(len, ciphertext)
 
-        # max_diff_pct = 0.5
-        # max_diff = max_diff_pct * len(subgroup)
 
-        # group = list(filter(lambda term: len(subgroup.difference(term)) < max_diff, ciphertext))
-        # flattened = list(flatten(*group))
 
-        # repeats = list(Counter(flattened).values())
-        # print(repeats)
+            ciphertext = zip(ciphertext, lengths)
+            ciphertext, _ = zip(*filter(lambda x: x[1] > TERM_LENGTH_CUTOFF, ciphertext))
 
-        # unique = list(Counter(repeats).keys())
-        # counter = list(Counter(repeats).values())
+            print(np.fromiter(ciphertext,dtype=object))
 
-        # unique = sorted(enumerate(unique), key=lambda x: counter[x[0]])
-        # counter = sorted(enumerate(counter), key=lambda x: counter[x[0]])
+            
+            group = set(ciphertext[-1])
+            ciphertext = set(ciphertext[:-1])
 
-        # plt.scatter(list(zip(*unique))[1], list(zip(*counter))[1], color="blue", alpha=0.7, linestyle="solid")
-        # plt.show()
+            
+            # # {(52, 1), (66, 1), (96, 1), (48, 1), (86, 1), (29, 1), (14, 1), (98, 1), (92, 1), (82, 1), (37, 1), (100, 1)}
 
+            MAX_DIFF_PCT = 0.5
+            while True:
+
+                closeness = map(lambda x: (x, len(group.difference(x))), ciphertext)
+                closest = min(closeness, key=lambda x: x[1])
+                
+                max_diff = math.floor(MAX_DIFF_PCT * len(group))
+
+                if closest[1] <= max_diff:
+                    group = group.union(closest[0])
+                    ciphertext.remove(closest[0])
+                else:
+                    break
+
+            print("GROUP", len(group))
 
 ###
 
@@ -65,6 +70,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     filename = (
-        f"{os.environ.get("DATA_DIRECTORY_PATH")}/cipher_{args.n}/cipher_{args.n}"
+        f"{os.environ.get("DATA_DIRECTORY")}/cipher_{args.n}_dir/cipher_{args.n}.hdf5"
     )
     codebreak(filename)
