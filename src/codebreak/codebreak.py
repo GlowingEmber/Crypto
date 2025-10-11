@@ -1,7 +1,6 @@
 import argparse
 from itertools import chain as flatten, product as cartesian
 import os
-import ast
 
 import sys
 
@@ -9,7 +8,6 @@ sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 from parameters import *
-
 
 # from collections import Counter
 
@@ -22,17 +20,12 @@ def codebreak(filename):
 
             ciphertext = file["expression"]
             ciphertext = np.array(ciphertext[:])
-
             ciphertext = map(tuple, ciphertext)
 
             lengths = map(len, ciphertext)
 
-
-
             ciphertext = zip(ciphertext, lengths)
             ciphertext, _ = zip(*filter(lambda x: x[1] > TERM_LENGTH_CUTOFF, ciphertext))
-
-            print(np.fromiter(ciphertext,dtype=object))
 
             
             group = set(ciphertext[-1])
@@ -42,20 +35,35 @@ def codebreak(filename):
             # # {(52, 1), (66, 1), (96, 1), (48, 1), (86, 1), (29, 1), (14, 1), (98, 1), (92, 1), (82, 1), (37, 1), (100, 1)}
 
             MAX_DIFF_PCT = 0.5
-            while True:
 
-                closeness = map(lambda x: (x, len(group.difference(x))), ciphertext)
-                closest = min(closeness, key=lambda x: x[1])
+            groups = []
+            while len(groups) < BETA:
+
+                while True:
+
+                    closeness = map(lambda x: (x, len(group.difference(x))), ciphertext)
+                    closest = min(closeness, key=lambda x: x[1])
+                    
+                    max_diff = math.floor(MAX_DIFF_PCT * len(group))
+
+                    if closest[1] <= max_diff:
+                        group = group.union(closest[0])
+                        ciphertext.remove(closest[0])
+                    else:
+                        groups.append(group)
+                        group = set()
+                        break
+                    
+            for x in groups:
+                print(sorted([int(l) for l in x]))
+
+            with open("data/cipher_0_dir/map_0.txt", "r") as file:
+                m = file.read()
+                print(m)
                 
-                max_diff = math.floor(MAX_DIFF_PCT * len(group))
 
-                if closest[1] <= max_diff:
-                    group = group.union(closest[0])
-                    ciphertext.remove(closest[0])
-                else:
-                    break
 
-            print("GROUP", len(group))
+                
 
 ###
 
