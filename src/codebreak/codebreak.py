@@ -9,8 +9,6 @@ sys.path.append(
 )
 from parameters import *
 
-# from collections import Counter
-
 import h5py
 import numpy as np
 
@@ -26,11 +24,7 @@ def codebreak(filename):
 
             ciphertext = zip(ciphertext, lengths)
             ciphertext, _ = zip(*filter(lambda x: x[1] > TERM_LENGTH_CUTOFF, ciphertext))
-
-            
-            group = set(ciphertext[-1])
-            ciphertext = set(ciphertext[:-1])
-
+            ciphertext = set(ciphertext)
             
             # # {(52, 1), (66, 1), (96, 1), (48, 1), (86, 1), (29, 1), (14, 1), (98, 1), (92, 1), (82, 1), (37, 1), (100, 1)}
 
@@ -38,6 +32,9 @@ def codebreak(filename):
 
             groups = []
             while len(groups) < BETA:
+                largest = max(ciphertext, key=len)
+                group = set(largest)
+                ciphertext.remove(largest)
 
                 while True:
 

@@ -66,8 +66,9 @@ def encrypt():
         beta_clauses_list = [CLAUSES.data[r] for r in J_MAP[a]]
         beta_literals_list = [l[0] for l in flatten(*beta_clauses_list)]
         beta_counts_set = set(Counter(beta_literals_list).items())
-
-        beta_sets_file.write(str(f"{beta_counts_set}\n"))
+        
+        beta_literals_set = set(beta_literals_list)
+        beta_sets_file.write(str(f"{beta_literals_set}\n"))
 
         for i in range(ALPHA):
 
@@ -105,15 +106,12 @@ def encrypt():
 
             cipher = np.append(cipher, summand)
 
-            print(cipher)
-
     beta_sets_file.close()
 
     cipher = np.fromiter([np.sort(t, axis=0) for t in cipher], dtype=object)
 
     ### SORT
 
-    print("ARGS DISPLAY", args.display)
     if args.display:
         cipher = sorted(
             cipher, key=lambda term: [p(term) for p in CIPHER_SORTING_ORDER], reverse=True
@@ -133,8 +131,6 @@ def encrypt():
             name="expression", shape=(len(cipher),), dtype=vlen_dtype
         )
         dset[:] = cipher
-
-    print(cipher)
 
 
 if __name__ == "__main__":
