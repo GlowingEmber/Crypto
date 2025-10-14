@@ -31,7 +31,6 @@ def product_simplify(clause, random):
 
     x_array, y_array = np.meshgrid(clause, random)
 
-    # product = np.column_stack
     product = np.fromiter(zip(x_array.ravel(), y_array.ravel()), dtype=tuple)
 
     # def unique(t):
@@ -63,7 +62,7 @@ def encrypt():
 
     for a in range(BETA):
 
-        beta_clauses_list = [CLAUSES.data[r] for r in J_MAP[a]]
+        beta_clauses_list = [CLAUSES[r] for r in J_MAP[a]]
         beta_literals_list = [l[0] for l in flatten(*beta_clauses_list)]
         beta_counts_set = set(Counter(beta_literals_list).items())
         
@@ -73,7 +72,7 @@ def encrypt():
         for i in range(ALPHA):
 
             ### CLAUSE
-            clause = CLAUSES.data[
+            clause = CLAUSES[
                 J_MAP[a][i]
             ]  # includes parity: [(x_1, p_1),(x_2, p_2),(x_3, p_3)]
             clause_literals_set = set(

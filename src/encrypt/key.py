@@ -1,5 +1,4 @@
 import secrets
-from . import PL
 
 import sys
 import os
@@ -25,10 +24,8 @@ def _generate_valid_clause():  # all variables ORed
 
     if any([valid_clause(int(clause[0][k]) - 2, clause[1][k]) for k in range(K)]):
         c = list(zip(*clause))
-        # print("CLAUSE ADDED!", c)
         return c
     return _generate_valid_clause()
 
-
 def generate_clause_list():
-    return PL.Expression(form="CNF", data=[_generate_valid_clause() for _ in range(M)])
+    return [_generate_valid_clause() for _ in range(M)]

@@ -1,5 +1,4 @@
 import argparse
-from itertools import chain as flatten, product as cartesian
 import os
 
 import sys
@@ -11,6 +10,8 @@ from parameters import *
 
 import h5py
 import numpy as np
+
+MAX_DIFF_PCT = 0.5
 
 def codebreak(filename):
     with h5py.File(filename, "r") as file:
@@ -25,12 +26,9 @@ def codebreak(filename):
             ciphertext = zip(ciphertext, lengths)
             ciphertext, _ = zip(*filter(lambda x: x[1] > TERM_LENGTH_CUTOFF, ciphertext))
             ciphertext = set(ciphertext)
-            
-            # # {(52, 1), (66, 1), (96, 1), (48, 1), (86, 1), (29, 1), (14, 1), (98, 1), (92, 1), (82, 1), (37, 1), (100, 1)}
-
-            MAX_DIFF_PCT = 0.5
 
             groups = []
+
             while len(groups) < BETA:
                 largest = max(ciphertext, key=len)
                 group = set(largest)
@@ -52,15 +50,7 @@ def codebreak(filename):
                         break
                     
             for x in groups:
-                print(sorted([int(l) for l in x]))
-
-            with open("data/cipher_0_dir/map_0.txt", "r") as file:
-                m = file.read()
-                print(m)
-                
-
-
-                
+                print(sorted([int(l) for l in x]))  
 
 ###
 
