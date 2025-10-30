@@ -18,7 +18,7 @@ sys.path.append(
 secure = secrets.SystemRandom()
 
 
-def distribute(iterable):  # itertools powerset recipe
+def distribute(iterable):  # from itertools powerset recipe
     return flatten.from_iterable(
         subset(iterable, r) for r in range(1, len(iterable) + 1)
     )
@@ -56,6 +56,10 @@ def cnf_to_neg_anf(term):
 def encrypt():
     J_MAP = [secure.sample(range(1, M), ALPHA) for _ in range(BETA)]
     CLAUSES = key.generate_clause_list()
+
+    clauses_file = open(f"data/cipher_{args.count}_dir/clauses_{args.count}.txt", "w")
+    clauses_file.write(str(CLAUSES))
+    clauses_file.close()
 
     cipher = np.empty(0, dtype=object)
     beta_sets_file = open(f"data/cipher_{args.count}_dir/map_{args.count}.txt", "w")
