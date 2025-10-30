@@ -17,14 +17,14 @@ def decrypt():
                         return x
                     return int(priv[x - 2])
 
-                v_assign = np.vectorize(assign)
+                v__assign = np.vectorize(assign)
 
-                v_assign_conditional = lambda term: v_assign(term) if len(term) > 0 else []
+                v__assign_conditional = lambda term: v__assign(term) if len(term) > 0 else []
 
                 expression = file["expression"]
                 expression = np.array(expression[:])
 
-                expression = [all(v_assign_conditional(term)) for term in expression]
+                expression = [all(v__assign_conditional(term)) for term in expression]
                 expression = filter(lambda term: term, expression)
                 expression = list(expression)
 

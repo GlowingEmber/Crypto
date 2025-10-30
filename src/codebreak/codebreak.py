@@ -5,6 +5,8 @@ import ast
 
 from itertools import chain as flatten, combinations as subset
 
+from src.encrypt.encrypt import cnf_to_neg_anf
+
 sys.path.append(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
@@ -69,7 +71,9 @@ def recover_plaintext(beta_literals_sets, clauses):
         )
 
     for beta_literals_set in beta_literals_sets:
+
         all_clauses = np.array(ast.literal_eval(clauses))
+
         possible_clauses = np.fromiter(
             filter(
                 lambda c: all(map(lambda l: l in beta_literals_set, list(zip(*c))[0])),
@@ -77,8 +81,28 @@ def recover_plaintext(beta_literals_sets, clauses):
             ),
             dtype=list,
         )
+        if len(possible_clauses) < ALPHA:
+            raise ValueError(f"<{ALPHA} clauses found")
+        
+        v__cnf_to_neg_anf = np.vectorize(cnf_to_neg_anf)
+
         print(beta_literals_set)
-        print(possible_clauses)
+        c = v__cnf_to_neg_anf(possible_clauses)
+        
+        for c_i in c:
+            c_i = c_i # ANF of clause i
+            r_i = np.fromiter(distribute(beta_literals_set), dtype=list) # ANF of all possible beta terms that random chooses from
+            r_i_coefficients = np.arange(len(r_i)) # a vector of variables to solve for
+
+            print(r_i)
+            print(r_i_coefficients)
+            
+            
+            
+
+
+
+
         # possible_clauses = filter()
 
         # print(beta_literals_set)
