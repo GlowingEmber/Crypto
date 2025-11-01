@@ -18,60 +18,70 @@ import numpy as np
 
 MAX_DIFF_PCT = 0.5
 
+
 class Coefficient:
-    def __init__(self,v):
-        self.v = v
+    def __init__(self, v):
+        self.value = v
 
     def __repr__(self):
-        return f"Coefficient(v={self.v})"
-
-def recover_beta_literals(filename):
-    with h5py.File(filename, "r") as file:
-        if "expression" in file:
-
-            ciphertext = file["expression"]
-            ciphertext = np.array(ciphertext[:])
-            ciphertext = map(tuple, ciphertext)
-
-            lengths = map(len, ciphertext)
-
-            ciphertext = zip(ciphertext, lengths)
-            ciphertext, _ = zip(
-                *filter(lambda x: x[1] > TERM_LENGTH_CUTOFF, ciphertext)
-            )
-            ciphertext = set(ciphertext)
-
-            groups = []
-
-            while len(groups) < BETA:
-
-                largest = max(ciphertext, key=len)
-                group = set(largest)
-                ciphertext.remove(largest)
-
-                while True:
-
-                    closeness = map(lambda x: (x, len(group.difference(x))), ciphertext)
-                    closest = min(closeness, key=lambda x: x[1])
-
-                    max_diff = math.floor(MAX_DIFF_PCT * len(group))
-
-                    if closest[1] <= max_diff:
-                        group = group.union(closest[0])
-                        ciphertext.remove(closest[0])
-                    else:
-                        groups.append(group)
-                        group = set()
-                        break
-
-            beta_literals_sets = []
-            for s in groups:
-                beta_literals_sets.append(sorted(np.array([int(l) for l in s])))
-            return beta_literals_sets
+        return f"Coefficient(v={self.value})"
 
 
-def recover_plaintext(beta_literals_sets, clauses):
+def recover_beta_literals(cipher_x_hdf5_file):
+    if "expression" in cipher_x_hdf5_file:
 
+        ciphertext = cipher_x_hdf5_file["expression"]
+        ciphertext = np.array(ciphertext[:])
+        ciphertext = map(tuple, ciphertext)
+
+        lengths = map(len, ciphertext)
+
+        ciphertext = zip(ciphertext, lengths)
+        ciphertext, _ = zip(*filter(lambda x: x[1] > TERM_LENGTH_CUTOFF, ciphertext))
+        ciphertext = set(ciphertext)
+
+        groups = []
+
+        while len(groups) < BETA:
+
+            largest = max(ciphertext, key=len)
+            group = set(largest)
+            ciphertext.remove(largest)
+
+            while True:
+
+                closeness = map(lambda x: (x, len(group.difference(x))), ciphertext)
+                closest = min(closeness, key=lambda x: x[1])
+
+                max_diff = math.floor(MAX_DIFF_PCT * len(group))
+
+                if closest[1] <= max_diff:
+                    group = group.union(closest[0])
+                    ciphertext.remove(closest[0])
+                else:
+                    groups.append(group)
+                    group = set()
+                    break
+
+        beta_literals_sets = []
+        for s in groups:
+            beta_literals_sets.append(sorted(np.array([int(l) for l in s])))
+        return sorted(beta_literals_sets)
+
+
+def recover_plaintext(beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file, map_x_txt_file):
+
+    clauses = clauses_x_txt_file.read()
+    for x in beta_literals_sets:
+        print([int(l) for l in x])
+    
+    print("----------")
+
+    oracle_beta_literals_sets = ast.literal_eval(map_x_txt_file.read())
+    for x in oracle_beta_literals_sets:
+        print(x)
+
+    
     def distribute(iterable):  # from itertools powerset recipe
         return flatten.from_iterable(
             subset(iterable, r) for r in range(1, len(iterable) + 1)
@@ -90,42 +100,39 @@ def recover_plaintext(beta_literals_sets, clauses):
         )
         if len(possible_clauses) < ALPHA:
             raise ValueError(f"<{ALPHA} clauses found")
-        
+
         v__cnf_to_neg_anf = np.vectorize(cnf_to_neg_anf)
 
-        # print(beta_literals_set)
+
+
         c = v__cnf_to_neg_anf(possible_clauses)
-        
         for C_i in c:
-            
 
             C_i = np.fromiter(C_i, dtype=object)
             # print("C_i", C_i)
-            R_i_all_terms = np.fromiter(distribute(beta_literals_set), dtype=object) # ANF of all possible beta terms that random chooses from
+            R_i_all_terms = np.fromiter(
+                distribute(beta_literals_set), dtype=object
+            )  # ANF of all possible beta terms that random chooses from
             # R_i_all_coefficients = np.arange(len(R_i_all_terms)) # a vector of variables to solve for
-            R_i_all_coefficients = map(lambda i: Coefficient(i), range(len(R_i_all_terms))) # a vector of variables to solve for
+            R_i_all_coefficients = map(
+                lambda i: Coefficient(i), range(len(R_i_all_terms))
+            )  # a vector of variables to solve for
 
-
-            R_i_terms = np.fromiter(zip(R_i_all_coefficients, R_i_all_terms), dtype=object)
+            R_i_terms = np.fromiter(
+                zip(R_i_all_coefficients, R_i_all_terms), dtype=object
+            )
 
             C_iR_i = cartesian(R_i_terms, C_i)
 
             expression = []
 
             for term in C_iR_i:
-                #  ((np.int64(0), (11,)), (np.int64(64), np.int64(16), np.int64(15)))
+
                 coefficient = term[0][0]
                 literals = tuple(sorted(set(term[0][1] + term[1])))
                 full_term = (coefficient, literals)
-                # print((coefficient, literals))
                 expression.append(full_term)
-                # print(expression)
-                # np.append(expression, (coefficient, literals))
-                # print(len(expression))
 
-            # print("C_i \n", C_i)
-            # print("R_i_terms \n", R_i_terms)
-            # print("C_iR_i \n", np.fromiter(C_iR_i, dtype=object))
 
             final_expression = defaultdict(list)
 
@@ -136,23 +143,43 @@ def recover_plaintext(beta_literals_sets, clauses):
 
             print(final_expression)
 
+            ciphertext = list(map(lambda t: tuple(sorted([np.int64(l) for l in t])), np.array(cipher_x_hdf5_file["expression"][:])))
+            print("ciphertext")
+            for x in ciphertext:
+                print(x)
 
-            
-            
-            
+            def embedded_vector(coefficients, dimension):
+                v = np.zeros(dimension)
+                for c in coefficients:
+                    v[c.value] = 1
+                    # NOTE THAT
+                    # if we are using XOR we would do v[c.value] = int(not v[c.value])
+                    # whereas if we are using OR we would do v[c.value] = 1
+                return v
 
 
+            n = len(final_expression.values())
+            lhs = np.zeros((n,n), dtype=int)
 
+            for i, row in enumerate(map(lambda x: embedded_vector(x, n), final_expression.values())):
+                lhs[i] = row
 
-        # possible_clauses = filter()
+            print("x in ciphertext")
+            for x in final_expression.keys():
+                print(x, x in ciphertext)
 
-        # print(beta_literals_set)
-        # # M_C = np.fromiter(distribute(beta_literals_set), dtype=tuple) # all possible monomials for the clauses
-        # # C = np.zeros(len(M)) # indicates which monomials are used in the clause (2^k = 2^3 maximum)
+            rhs = map(lambda x: x in ciphertext, final_expression.keys())
+            rhs = np.fromiter(rhs, dtype=int)
+            np.set_printoptions(threshold=sys.maxsize)
+            print("rhs", rhs)
 
-        # M_R = np.fromiter(distribute(beta_literals_set), dtype=tuple)
-        # print(M_R)
-        # # R = np.arange(len(M))
+            try:
+                sol = np.linalg.solve(lhs, rhs)
+                print(sol)
+            except Exception as e:
+                print(f"No solution: {e}")
+                print(0)
+
 
 
 def codebreak(n):
@@ -161,11 +188,11 @@ def codebreak(n):
         f"{os.environ.get("DATA_DIRECTORY")}/cipher_{n}_dir/clauses_{n}.txt"
     )
 
-    with open(clause_filename, "r") as file:
-        beta_literals_sets = recover_beta_literals(hdf5_filename)
-        clauses = file.read()
-        print(beta_literals_sets)
-        y = recover_plaintext(beta_literals_sets, clauses)
+    with h5py.File(hdf5_filename, "r") as cipher_x_hdf5_file:
+        beta_literals_sets = recover_beta_literals(cipher_x_hdf5_file)
+        with open(clause_filename, "r") as clauses_x_txt_file:
+            with open(f"data/cipher_{n}_dir/map_{n}.txt", "r") as map_x_txt_file:
+                y = recover_plaintext(beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file, map_x_txt_file)
 
 
 ###

@@ -62,7 +62,7 @@ def encrypt():
     clauses_file.close()
 
     cipher = np.empty(0, dtype=object)
-    beta_sets_file = open(f"data/cipher_{args.count}_dir/map_{args.count}.txt", "w")
+    beta_literals_sets = []
 
     for a in range(BETA):
 
@@ -70,8 +70,8 @@ def encrypt():
         beta_literals_list = [l[0] for l in flatten(*beta_clauses_list)]
         beta_counts_set = set(Counter(beta_literals_list).items())
         
-        beta_literals_set = set(beta_literals_list)
-        beta_sets_file.write(str(f"{beta_literals_set}\n"))
+        beta_literals_set = sorted(set(beta_literals_list))
+        beta_literals_sets.append(beta_literals_set)
 
         for i in range(ALPHA):
 
@@ -109,6 +109,10 @@ def encrypt():
 
             cipher = np.append(cipher, summand)
 
+    beta_literals_sets = sorted(beta_literals_sets)
+    
+    beta_sets_file = open(f"data/cipher_{args.count}_dir/map_{args.count}.txt", "w")
+    beta_sets_file.write(str(f"{beta_literals_sets}\n"))
     beta_sets_file.close()
 
     cipher = np.fromiter([np.sort(t, axis=0) for t in cipher], dtype=object)
