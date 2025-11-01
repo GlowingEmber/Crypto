@@ -3,7 +3,8 @@ import os
 import sys
 import ast
 
-from itertools import chain as flatten, combinations as subset
+from itertools import chain as flatten, combinations as subset, product as cartesian
+from collections import defaultdict
 
 from src.encrypt.encrypt import cnf_to_neg_anf
 
@@ -17,6 +18,12 @@ import numpy as np
 
 MAX_DIFF_PCT = 0.5
 
+class Coefficient:
+    def __init__(self,v):
+        self.v = v
+
+    def __repr__(self):
+        return f"Coefficient(v={self.v})"
 
 def recover_beta_literals(filename):
     with h5py.File(filename, "r") as file:
@@ -59,7 +66,7 @@ def recover_beta_literals(filename):
 
             beta_literals_sets = []
             for s in groups:
-                beta_literals_sets.append(sorted([int(l) for l in s]))
+                beta_literals_sets.append(sorted(np.array([int(l) for l in s])))
             return beta_literals_sets
 
 
@@ -86,16 +93,50 @@ def recover_plaintext(beta_literals_sets, clauses):
         
         v__cnf_to_neg_anf = np.vectorize(cnf_to_neg_anf)
 
-        print(beta_literals_set)
+        # print(beta_literals_set)
         c = v__cnf_to_neg_anf(possible_clauses)
         
-        for c_i in c:
-            c_i = c_i # ANF of clause i
-            r_i = np.fromiter(distribute(beta_literals_set), dtype=list) # ANF of all possible beta terms that random chooses from
-            r_i_coefficients = np.arange(len(r_i)) # a vector of variables to solve for
+        for C_i in c:
+            
 
-            print(r_i)
-            print(r_i_coefficients)
+            C_i = np.fromiter(C_i, dtype=object)
+            # print("C_i", C_i)
+            R_i_all_terms = np.fromiter(distribute(beta_literals_set), dtype=object) # ANF of all possible beta terms that random chooses from
+            # R_i_all_coefficients = np.arange(len(R_i_all_terms)) # a vector of variables to solve for
+            R_i_all_coefficients = map(lambda i: Coefficient(i), range(len(R_i_all_terms))) # a vector of variables to solve for
+
+
+            R_i_terms = np.fromiter(zip(R_i_all_coefficients, R_i_all_terms), dtype=object)
+
+            C_iR_i = cartesian(R_i_terms, C_i)
+
+            expression = []
+
+            for term in C_iR_i:
+                #  ((np.int64(0), (11,)), (np.int64(64), np.int64(16), np.int64(15)))
+                coefficient = term[0][0]
+                literals = tuple(sorted(set(term[0][1] + term[1])))
+                full_term = (coefficient, literals)
+                # print((coefficient, literals))
+                expression.append(full_term)
+                # print(expression)
+                # np.append(expression, (coefficient, literals))
+                # print(len(expression))
+
+            # print("C_i \n", C_i)
+            # print("R_i_terms \n", R_i_terms)
+            # print("C_iR_i \n", np.fromiter(C_iR_i, dtype=object))
+
+            final_expression = defaultdict(list)
+
+            for e in expression:
+                coefficient = e[0]
+                literals = e[1]
+                final_expression[literals].append(coefficient)
+
+            print(final_expression)
+
+
             
             
             

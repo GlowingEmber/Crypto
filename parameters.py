@@ -10,7 +10,7 @@ M = 426 # 7 # NUMBER OF CLAUSES
 K = 3  # NUMBER OF VARIABLES PER CLAUSE
 
 # 2 <= BETA << (much less than) ALPHA
-ALPHA = 4  # 5 or 4
+ALPHA = 3  # ~4 or 5 are the upper bounds for reasonable solve time right now
 BETA = 10
 
 # (a)
