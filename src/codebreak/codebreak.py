@@ -65,23 +65,24 @@ def recover_beta_literals(cipher_x_hdf5_file):
 
         beta_literals_sets = []
         for s in groups:
-            beta_literals_sets.append(sorted(np.array([int(l) for l in s])))
+            beta_literals_sets.append(sorted([int(l) for l in s]))
         return sorted(beta_literals_sets)
 
 
-def recover_plaintext(beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file, map_x_txt_file):
+def recover_plaintext(
+    beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file, map_x_txt_file
+):
 
     clauses = clauses_x_txt_file.read()
     for x in beta_literals_sets:
         print([int(l) for l in x])
-    
+
     print("----------")
 
-    oracle_beta_literals_sets = ast.literal_eval(map_x_txt_file.read())
-    for x in oracle_beta_literals_sets:
+    real_beta_literals_sets = ast.literal_eval(map_x_txt_file.read())
+    for x in real_beta_literals_sets:
         print(x)
 
-    
     def distribute(iterable):  # from itertools powerset recipe
         return flatten.from_iterable(
             subset(iterable, r) for r in range(1, len(iterable) + 1)
@@ -89,7 +90,7 @@ def recover_plaintext(beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file
 
     for beta_literals_set in beta_literals_sets:
 
-        all_clauses = np.array(ast.literal_eval(clauses))
+        all_clauses = ast.literal_eval(clauses)
 
         possible_clauses = np.fromiter(
             filter(
@@ -98,88 +99,91 @@ def recover_plaintext(beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file
             ),
             dtype=list,
         )
+        print("possible clauses", possible_clauses)
         if len(possible_clauses) < ALPHA:
             raise ValueError(f"<{ALPHA} clauses found")
+        
+        R_terms = np.fromiter(distribute(beta_literals_set), dtype=object)
+
+        n = len(R_terms)
+        a = np.zeros((n,n), dtype=np.int64)
+        b = np.zeros(n, dtype=np.int64)
+        print("a", a)
 
         v__cnf_to_neg_anf = np.vectorize(cnf_to_neg_anf)
-
-
-
-        c = v__cnf_to_neg_anf(possible_clauses)
-        for C_i in c:
-
+        C = v__cnf_to_neg_anf(possible_clauses)
+        # C = [cnf_to_neg_anf(C_i) for C_i in possible_clauses]
+        # print("hi", [list(x) for x in C])
+        for C_i in C:
+            #####
             C_i = np.fromiter(C_i, dtype=object)
-            # print("C_i", C_i)
-            R_i_all_terms = np.fromiter(
-                distribute(beta_literals_set), dtype=object
-            )  # ANF of all possible beta terms that random chooses from
-            # R_i_all_coefficients = np.arange(len(R_i_all_terms)) # a vector of variables to solve for
-            R_i_all_coefficients = map(
-                lambda i: Coefficient(i), range(len(R_i_all_terms))
-            )  # a vector of variables to solve for
+            print(list(C_i))
+            #####
+            R_i_terms = R_terms
+            R_i_coefficients = map(lambda i: Coefficient(i), range(len(R_i_terms)))
+            R_i = np.fromiter(zip(R_i_coefficients, R_i_terms), dtype=object)
 
-            R_i_terms = np.fromiter(
-                zip(R_i_all_coefficients, R_i_all_terms), dtype=object
-            )
+            print("C_i", C_i)
+            #####
+            unformatted_C_iR_i = cartesian(R_i, C_i)
+            C_iR_i = []
 
-            C_iR_i = cartesian(R_i_terms, C_i)
 
-            expression = []
-
-            for term in C_iR_i:
+            for term in unformatted_C_iR_i:
 
                 coefficient = term[0][0]
-                literals = tuple(sorted(set(term[0][1] + term[1])))
+                literals = tuple(sorted([int(x) for x in set(term[0][1] + term[1])]))
                 full_term = (coefficient, literals)
-                expression.append(full_term)
+                C_iR_i.append(full_term)
+
+            distributed_C_iR_i = defaultdict(list)
+
+            for term in C_iR_i:
+                coefficient = term[0]
+                literals = term[1]
+                distributed_C_iR_i[literals].append(coefficient)
 
 
-            final_expression = defaultdict(list)
+            print(distributed_C_iR_i)
 
-            for e in expression:
-                coefficient = e[0]
-                literals = e[1]
-                final_expression[literals].append(coefficient)
+            ciphertext = list(
+                map(
+                    lambda t: tuple(sorted([np.int64(l) for l in t])),
+                    np.array(cipher_x_hdf5_file["expression"][:]),
+                )
+            )
 
-            print(final_expression)
-
-            ciphertext = list(map(lambda t: tuple(sorted([np.int64(l) for l in t])), np.array(cipher_x_hdf5_file["expression"][:])))
-            print("ciphertext")
-            for x in ciphertext:
-                print(x)
-
-            def embedded_vector(coefficients, dimension):
+            def clause_vector(coefficients, dimension):
                 v = np.zeros(dimension)
                 for c in coefficients:
                     v[c.value] = 1
-                    # NOTE THAT
-                    # if we are using XOR we would do v[c.value] = int(not v[c.value])
+                    # NOTE: if we are using XOR we would do v[c.value] = int(not v[c.value])
                     # whereas if we are using OR we would do v[c.value] = 1
                 return v
 
+            # m = len(distributed_C_iR_i.values())
+            lhs = np.zeros((n, n), dtype=int)
 
-            n = len(final_expression.values())
-            lhs = np.zeros((n,n), dtype=int)
-
-            for i, row in enumerate(map(lambda x: embedded_vector(x, n), final_expression.values())):
+            for i, row in enumerate(
+                map(lambda x: clause_vector(x, n), distributed_C_iR_i.values())
+            ):
                 lhs[i] = row
 
-            print("x in ciphertext")
-            for x in final_expression.keys():
+            for x in distributed_C_iR_i.keys():
                 print(x, x in ciphertext)
 
-            rhs = map(lambda x: x in ciphertext, final_expression.keys())
+            rhs = map(lambda x: x in ciphertext, distributed_C_iR_i.keys())
             rhs = np.fromiter(rhs, dtype=int)
             np.set_printoptions(threshold=sys.maxsize)
+            print("lhs", lhs)
             print("rhs", rhs)
 
-            try:
-                sol = np.linalg.solve(lhs, rhs)
-                print(sol)
-            except Exception as e:
-                print(f"No solution: {e}")
-                print(0)
-
+        # try:
+        #     sol = np.linalg.solve(lhs, rhs)
+        #     print(sol)
+        # except Exception as e:
+        #     print(f"No solution: {e}")
+        #     print(0)
 
 
 def codebreak(n):
@@ -192,7 +196,12 @@ def codebreak(n):
         beta_literals_sets = recover_beta_literals(cipher_x_hdf5_file)
         with open(clause_filename, "r") as clauses_x_txt_file:
             with open(f"data/cipher_{n}_dir/map_{n}.txt", "r") as map_x_txt_file:
-                y = recover_plaintext(beta_literals_sets, clauses_x_txt_file, cipher_x_hdf5_file, map_x_txt_file)
+                y = recover_plaintext(
+                    beta_literals_sets,
+                    clauses_x_txt_file,
+                    cipher_x_hdf5_file,
+                    map_x_txt_file,
+                )
 
 
 ###
